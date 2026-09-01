@@ -1,0 +1,79 @@
+{
+  "name": "antsheet",
+  "version": "0.1.0",
+  "description": "Lightweight, type-safe TypeScript library for working with spreadsheet data",
+  "main": "dist/index.js",
+  "module": "dist/index.mjs",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./parser": {
+      "import": "./dist/parser.mjs",
+      "require": "./dist/parser.js",
+      "types": "./dist/parser.d.ts"
+    },
+    "./converter": {
+      "import": "./dist/converter.mjs",
+      "require": "./dist/converter.js",
+      "types": "./dist/converter.d.ts"
+    },
+    "./serializer": {
+      "import": "./dist/serializer.mjs",
+      "require": "./dist/serializer.js",
+      "types": "./dist/serializer.d.ts"
+    },
+    "./types": {
+      "import": "./dist/types.mjs",
+      "require": "./dist/types.js",
+      "types": "./dist/types.d.ts"
+    }
+  },
+  "files": [
+    "dist",
+    "src",
+    "docs",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "test": "vitest",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint src --ext .ts",
+    "prepublishOnly": "pnpm build"
+  },
+  "keywords": [
+    "spreadsheet",
+    "excel",
+    "csv",
+    "parser",
+    "converter",
+    "typescript",
+    "data",
+    "table"
+  ],
+  "author": "Anticeil Team",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/mfaizasysyauqi/antsheet.git"
+  },
+  "bugs": {
+    "url": "https://github.com/mfaizasysyauqi/antsheet/issues"
+  },
+  "homepage": "https://github.com/mfaizasysyauqi/antsheet#readme",
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "tsup": "^8.0.0",
+    "typescript": "^5.0.0",
+    "vitest": "^1.0.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
