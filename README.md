@@ -5,6 +5,7 @@
 ## Features
 
 - ✅ **Type-safe** - Full TypeScript support with comprehensive type definitions
+- 📈 **Chart generation** - Declare and extract chart datasets (Bar, Line, Pie, Area, etc.)
 - 🔄 **Format conversion** - Convert between different spreadsheet formats
 - 📊 **Data parsing** - Parse spreadsheet data with ease
 - 💾 **Serialization** - Serialize spreadsheet data efficiently
@@ -23,16 +24,19 @@ yarn add antsheet
 ## Usage
 
 ```typescript
-import { parseSpreadsheet, convertFormat, serialize } from 'antsheet';
+import { parseAntsheet, serializeAntsheet, extractChartData } from 'antsheet';
 
-// Parse spreadsheet data
-const data = parseSpreadsheet(rawData);
+// Parse .antsheet file
+const doc = parseAntsheet(antsheetContent);
 
-// Convert format
-const converted = convertFormat(data, 'xlsx');
+// Extract chart data (ready for Recharts, Chart.js, etc.)
+if (doc.charts && doc.charts.length > 0) {
+  const chartData = extractChartData(doc, doc.charts[0]);
+  console.log(chartData.labels, chartData.datasets);
+}
 
-// Serialize
-const serialized = serialize(data);
+// Serialize back to .antsheet
+const serialized = serializeAntsheet(doc);
 ```
 
 ## Documentation
@@ -48,20 +52,27 @@ See [types.ts](./src/types.ts) for complete type definitions.
 ### Parser
 
 ```typescript
-import { parseSpreadsheet } from 'antsheet/parser';
-```
-
-### Converter
-
-```typescript
-import { convertFormat } from 'antsheet/converter';
+import { parseAntsheet } from 'antsheet/parser';
 ```
 
 ### Serializer
 
 ```typescript
-import { serialize } from 'antsheet/serializer';
+import { serializeAntsheet } from 'antsheet/serializer';
 ```
+
+### Chart Extractor
+
+```typescript
+import { extractChartData } from 'antsheet/chart';
+```
+
+### Converter
+
+```typescript
+import { convertToUniver } from 'antsheet/converter';
+```
+
 
 ## Development
 

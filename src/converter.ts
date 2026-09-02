@@ -1,5 +1,6 @@
 // converter.ts
-import type { SheetDocument, CellStyle } from "./types";
+import type { SheetDocument, SheetMeta, CellData, CellStyle } from "./types";
+import { indexToColumnLetter } from "./chart";
 
 // ─────────────────────────────────────────────
 // Univer types (simplified)
@@ -7,6 +8,7 @@ import type { SheetDocument, CellStyle } from "./types";
 export interface UniverCell {
   v?: string | number | boolean | null;
   t?: number; // 1 = string, 2 = number, 3 = boolean
+  f?: string; // Formula (e.g. "=SUM(A1:A5)")
   s?: IStyleData;
 }
 
@@ -21,6 +23,7 @@ export interface IStyleData {
   bg?: { rgb?: string }; // background
   ht?: number;          // horizontal align (1=left, 2=center, 3=right)
   vt?: number;          // vertical align (1=top, 2=middle, 3=bottom)
+  tb?: number;          // text wrap (1 = overflow, 2 = wrap, 3 = clip)
   n?: { pattern: string }; // number format
   bd?: IBorderData;
 }
@@ -33,7 +36,7 @@ export interface IBorderData {
 }
 
 export interface IBorderStyleData {
-  s: number; // style (1 = thin, dll)
+  s: number; // style (1 = thin, 2 = medium/thick)
   cl?: { rgb?: string };
 }
 
@@ -42,6 +45,13 @@ export interface IRange {
   startColumn: number;
   endRow: number;
   endColumn: number;
+}
+
+export interface IFreezeData {
+  startRow?: number;
+  startColumn?: number;
+  xSplit?: number;
+  ySplit?: number;
 }
 
 export interface UniverSheetData {
@@ -53,10 +63,11 @@ export interface UniverSheetData {
   mergeData: IRange[];
   rowData: Record<number, { h?: number }>;
   columnData: Record<number, { w?: number }>;
+  freeze?: IFreezeData;
 }
 
 // ─────────────────────────────────────────────
-// Main Converter
+// AntSheet -> Univer Converter
 // ─────────────────────────────────────────────
 export function convertToUniver(doc: SheetDocument): UniverSheetData {
   const cellData: Record<number, Record<number, UniverCell>> = {};
@@ -86,9 +97,12 @@ export function convertToUniver(doc: SheetDocument): UniverSheetData {
 
     if (!cellData[row]) cellData[row] = {};
 
+    const isFormula = typeof cell.value === "string" && cell.value.startsWith("=");
+
     cellData[row][col] = {
-      v: cell.value,
-      t: getCellType(cell.value),
+      v: isFormula ? null : cell.value,
+      f: isFormula ? (cell.value as string) : undefined,
+      t: isFormula ? undefined : getCellType(cell.value),
       s: cell.style ? convertStyle(cell.style) : undefined,
     };
   }
@@ -96,6 +110,17 @@ export function convertToUniver(doc: SheetDocument): UniverSheetData {
   // 4. Merges
   for (const range of doc.merges) {
     mergeData.push(parseRange(range));
+  }
+
+  // 5. Freeze Panes
+  let freeze: IFreezeData | undefined = undefined;
+  if (doc.meta.freezeRow !== undefined || doc.meta.freezeColumn !== undefined) {
+    freeze = {
+      startRow: doc.meta.freezeRow ?? 0,
+      startColumn: doc.meta.freezeColumn ?? 0,
+      ySplit: doc.meta.freezeRow ?? 0,
+      xSplit: doc.meta.freezeColumn ?? 0,
+    };
   }
 
   return {
@@ -107,6 +132,86 @@ export function convertToUniver(doc: SheetDocument): UniverSheetData {
     mergeData,
     rowData,
     columnData,
+    freeze,
+  };
+}
+
+// ─────────────────────────────────────────────
+// Univer -> AntSheet Converter
+// ─────────────────────────────────────────────
+export function convertFromUniver(univerData: UniverSheetData): SheetDocument {
+  const name = univerData.name || "Untitled";
+  const meta: SheetMeta = {};
+  const cells: Record<string, CellData> = {};
+  const merges: string[] = [];
+
+  // 1. Column Widths
+  if (univerData.columnData) {
+    const colWidths: Record<string, number> = {};
+    for (const [colIdxStr, colInfo] of Object.entries(univerData.columnData)) {
+      if (colInfo?.w !== undefined) {
+        const colLetter = indexToColumnLetter(parseInt(colIdxStr, 10));
+        colWidths[colLetter] = colInfo.w;
+      }
+    }
+    if (Object.keys(colWidths).length > 0) meta.columnWidth = colWidths;
+  }
+
+  // 2. Row Heights
+  if (univerData.rowData) {
+    const rowHeights: Record<string, number> = {};
+    for (const [rowIdxStr, rowInfo] of Object.entries(univerData.rowData)) {
+      if (rowInfo?.h !== undefined) {
+        const rowNum = parseInt(rowIdxStr, 10) + 1;
+        rowHeights[String(rowNum)] = rowInfo.h;
+      }
+    }
+    if (Object.keys(rowHeights).length > 0) meta.rowHeight = rowHeights;
+  }
+
+  // 3. Freeze Panes
+  if (univerData.freeze) {
+    const freezeRow = univerData.freeze.startRow ?? univerData.freeze.ySplit;
+    const freezeCol = univerData.freeze.startColumn ?? univerData.freeze.xSplit;
+    if (freezeRow && freezeRow > 0) meta.freezeRow = freezeRow;
+    if (freezeCol && freezeCol > 0) meta.freezeColumn = freezeCol;
+  }
+
+  // 4. Cells
+  if (univerData.cellData) {
+    for (const [rStr, cols] of Object.entries(univerData.cellData)) {
+      const r = parseInt(rStr, 10);
+      if (!cols) continue;
+
+      for (const [cStr, cell] of Object.entries(cols)) {
+        const c = parseInt(cStr, 10);
+        if (!cell) continue;
+
+        const ref = `${indexToColumnLetter(c)}${r + 1}`;
+        const value = cell.f ? cell.f : (cell.v ?? null);
+        const style = cell.s ? convertUniverStyle(cell.s) : undefined;
+
+        if (value !== null || style) {
+          cells[ref] = { value, style };
+        }
+      }
+    }
+  }
+
+  // 5. Merges
+  if (univerData.mergeData) {
+    for (const m of univerData.mergeData) {
+      const startRef = `${indexToColumnLetter(m.startColumn)}${m.startRow + 1}`;
+      const endRef = `${indexToColumnLetter(m.endColumn)}${m.endRow + 1}`;
+      merges.push(startRef === endRef ? startRef : `${startRef}:${endRef}`);
+    }
+  }
+
+  return {
+    name,
+    meta,
+    cells,
+    merges,
   };
 }
 
@@ -139,6 +244,15 @@ function convertStyle(style: CellStyle): IStyleData {
     s.st = { s: 1 };
   }
 
+  // Text Wrapping
+  if (style.textWrap === "wrap" || style.wrapText === true) {
+    s.tb = 2;
+  } else if (style.textWrap === "clip") {
+    s.tb = 3;
+  } else if (style.textWrap === "overflow" || style.wrapText === false) {
+    s.tb = 1;
+  }
+
   // Color
   if (style.color) s.cl = { rgb: style.color };
   if (style.backgroundColor) s.bg = { rgb: style.backgroundColor };
@@ -164,6 +278,37 @@ function convertStyle(style: CellStyle): IStyleData {
   return s;
 }
 
+function convertUniverStyle(s: IStyleData): CellStyle | undefined {
+  const style: CellStyle = {};
+
+  if (s.ff) style.fontFamily = s.ff;
+  if (s.fs) style.fontSize = s.fs;
+  if (s.bl === 1) style.fontWeight = "bold";
+  if (s.it === 1) style.fontStyle = "italic";
+  if (s.ul?.s === 1) style.textDecoration = "underline";
+  if (s.st?.s === 1) style.textDecoration = "lineThrough";
+  if (s.cl?.rgb) style.color = s.cl.rgb;
+  if (s.bg?.rgb) style.backgroundColor = s.bg.rgb;
+
+  if (s.ht === 1) style.textAlign = "left";
+  if (s.ht === 2) style.textAlign = "center";
+  if (s.ht === 3) style.textAlign = "right";
+
+  if (s.vt === 1) style.verticalAlign = "top";
+  if (s.vt === 2) style.verticalAlign = "middle";
+  if (s.vt === 3) style.verticalAlign = "bottom";
+
+  if (s.tb === 2) {
+    style.textWrap = "wrap";
+  } else if (s.tb === 3) {
+    style.textWrap = "clip";
+  } else if (s.tb === 1) {
+    style.textWrap = "overflow";
+  }
+
+  return Object.keys(style).length > 0 ? style : undefined;
+}
+
 function convertBorder(style: CellStyle): IBorderData | undefined {
   const bd: IBorderData = {};
 
@@ -179,7 +324,6 @@ function convertBorder(style: CellStyle): IBorderData | undefined {
         cl: style.borderColor ? { rgb: style.borderColor } : undefined,
       };
     } else {
-      // contoh: "2 solid #0f172a"
       const parts = value.split(" ");
       const width = parseInt(parts[0], 10) || 1;
       const color = parts[2] || style.borderColor;
@@ -211,7 +355,7 @@ function convertBorder(style: CellStyle): IBorderData | undefined {
   if (style.border === "left") apply("l", style.borderWidth || 1);
   if (style.border === "right") apply("r", style.borderWidth || 1);
 
-  // Detail per sisi
+  // Detail per side
   apply("t", style.borderTop);
   apply("r", style.borderRight);
   apply("b", style.borderBottom);
@@ -247,7 +391,7 @@ function mapFormatToPattern(format: string): string {
     case "number:0":
       return "#,##0";
     case "compact":
-      return "0.0,," ; // sederhana
+      return "0.0,,";
     case "date":
       return "dd/mm/yyyy";
     case "date:long":
