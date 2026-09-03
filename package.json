@@ -50,6 +50,11 @@
       "types": "./dist/csv.d.ts",
       "import": "./dist/csv.mjs",
       "require": "./dist/csv.js"
+    },
+    "./formula": {
+      "types": "./dist/formula.d.ts",
+      "import": "./dist/formula.mjs",
+      "require": "./dist/formula.js"
     }
   },
   "files": [
