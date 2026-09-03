@@ -41,13 +41,38 @@ export function parseAntsheet(text: string): SheetDocument {
 
 /**
  * Parse a (possibly multi-sheet) .antsheet text into a WorkbookDocument.
- * Sheets are separated by lines containing only `---`.
+ * Sheets can be separated either by `---` or by top-level `# SheetName` headers.
  */
 export function parseWorkbook(text: string): WorkbookDocument {
-  // Split on sheet-separator lines (--- alone on a line)
-  const sheetTexts = text.split(/^---+\s*$/m).map((s) => s.trim()).filter(Boolean);
-  const sheets = sheetTexts.map(parseSheet);
-  return { sheets };
+  // First split on explicit sheet-separator lines (--- alone on a line)
+  const explicitChunks = text.split(/^---+\s*$/m).map((s) => s.trim()).filter(Boolean);
+  const rawSheets: string[] = [];
+
+  for (const chunk of explicitChunks) {
+    const lines = chunk.split(/\r?\n/);
+    let currentSheetLines: string[] = [];
+
+    for (const line of lines) {
+      const trimmed = line.trim();
+      // If we encounter a new top-level sheet header (# SheetName) and already have content, start a new sheet
+      if (trimmed.startsWith("# ") && currentSheetLines.some((l) => l.trim().length > 0)) {
+        rawSheets.push(currentSheetLines.join("\n").trim());
+        currentSheetLines = [line];
+      } else {
+        currentSheetLines.push(line);
+      }
+    }
+
+    if (currentSheetLines.length > 0 && currentSheetLines.some((l) => l.trim().length > 0)) {
+      rawSheets.push(currentSheetLines.join("\n").trim());
+    }
+  }
+
+  const sheets = (rawSheets.length > 0 ? rawSheets : [text.trim()])
+    .map(parseSheet)
+    .filter((s) => Boolean(s.name || Object.keys(s.cells).length > 0));
+
+  return { sheets: sheets.length > 0 ? sheets : [parseSheet(text)] };
 }
 
 // ─────────────────────────────────────────────

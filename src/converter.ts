@@ -1,6 +1,7 @@
 // converter.ts
-import type { SheetDocument, SheetMeta, CellData, CellStyle } from "./types";
+import type { SheetDocument, WorkbookDocument, SheetMeta, CellData, CellStyle } from "./types";
 import { indexToColumnLetter } from "./chart";
+
 
 // ─────────────────────────────────────────────
 // Univer types (simplified)
@@ -136,8 +137,66 @@ export function convertToUniver(doc: SheetDocument): UniverSheetData {
   };
 }
 
+/**
+ * Convert a SheetDocument or WorkbookDocument into a complete Univer IWorkbookData object.
+ */
+export function convertToUniverWorkbook(docOrWb: SheetDocument | WorkbookDocument): {
+  id: string;
+  name: string;
+  appVersion: string;
+  locale: string;
+  sheetOrder: string[];
+  sheets: Record<string, UniverSheetData>;
+  styles: Record<string, any>;
+} {
+  const sheets = "sheets" in docOrWb ? docOrWb.sheets : [docOrWb];
+  const sheetOrder: string[] = [];
+  const sheetsMap: Record<string, UniverSheetData> = {};
+
+  sheets.forEach((sheet, idx) => {
+    const sheetId = `sheet-${idx + 1}`;
+    const univerSheet = convertToUniver(sheet);
+    univerSheet.id = sheetId;
+    sheetOrder.push(sheetId);
+    sheetsMap[sheetId] = univerSheet;
+  });
+
+  const firstDocName = sheets[0]?.name || "Spreadsheet";
+
+  return {
+    id: `workbook-${Date.now()}`,
+    name: firstDocName,
+    appVersion: "0.25.1",
+    locale: "enUS",
+    sheetOrder,
+    sheets: sheetsMap,
+    styles: {},
+  };
+}
+
+/**
+ * Convert a complete Univer IWorkbookData object back into a WorkbookDocument.
+ */
+export function convertFromUniverWorkbook(workbookData: {
+  sheetOrder?: string[];
+  sheets?: Record<string, UniverSheetData>;
+}): WorkbookDocument {
+  const sheetOrder = workbookData.sheetOrder ?? Object.keys(workbookData.sheets ?? {});
+  const sheets: SheetDocument[] = [];
+
+  for (const sheetId of sheetOrder) {
+    const sheetData = workbookData.sheets?.[sheetId];
+    if (sheetData) {
+      sheets.push(convertFromUniver(sheetData));
+    }
+  }
+
+  return { sheets };
+}
+
 // ─────────────────────────────────────────────
 // Univer -> AntSheet Converter
+
 // ─────────────────────────────────────────────
 export function convertFromUniver(univerData: UniverSheetData): SheetDocument {
   const name = univerData.name || "Untitled";

@@ -46,6 +46,25 @@ describe("Multi-Sheet (Workbook)", () => {
     expect(serialized).toContain("# Summary");
   });
 
+  it("should parse multiple sheets defined with # SheetName without ---", () => {
+    const textWithoutDashes = `# Sheet1
+## Cells
+A1 = "Data 1"
+B1 = 100
+
+# Sheet2
+## Cells
+A1 = "Data 2"
+B1 = 200
+`;
+    const wb = parseWorkbook(textWithoutDashes);
+    expect(wb.sheets).toHaveLength(2);
+    expect(wb.sheets[0].name).toBe("Sheet1");
+    expect(wb.sheets[0].cells.A1.value).toBe("Data 1");
+    expect(wb.sheets[1].name).toBe("Sheet2");
+    expect(wb.sheets[1].cells.A1.value).toBe("Data 2");
+  });
+
   it("parseAntsheet should still work for single-sheet (backwards compat)", () => {
     const doc = parseAntsheet(`# Inventory
 
