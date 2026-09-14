@@ -1,0 +1,118 @@
+{
+  "name": "antsheet",
+  "version": "0.1.0",
+  "description": "Lightweight, type-safe TypeScript library for working with spreadsheet data",
+  "main": "dist/index.js",
+  "module": "dist/index.mjs",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js"
+    },
+    "./parser": {
+      "types": "./dist/parser.d.ts",
+      "import": "./dist/parser.mjs",
+      "require": "./dist/parser.js"
+    },
+    "./converter": {
+      "types": "./dist/converter.d.ts",
+      "import": "./dist/converter.mjs",
+      "require": "./dist/converter.js"
+    },
+    "./serializer": {
+      "types": "./dist/serializer.d.ts",
+      "import": "./dist/serializer.mjs",
+      "require": "./dist/serializer.js"
+    },
+    "./types": {
+      "types": "./dist/types.d.ts",
+      "import": "./dist/types.mjs",
+      "require": "./dist/types.js"
+    },
+    "./chart": {
+      "types": "./dist/chart.d.ts",
+      "import": "./dist/chart.mjs",
+      "require": "./dist/chart.js"
+    },
+    "./validator": {
+      "types": "./dist/validator.d.ts",
+      "import": "./dist/validator.mjs",
+      "require": "./dist/validator.js"
+    },
+    "./xlsx": {
+      "types": "./dist/xlsx.d.ts",
+      "import": "./dist/xlsx.mjs",
+      "require": "./dist/xlsx.js"
+    },
+    "./csv": {
+      "types": "./dist/csv.d.ts",
+      "import": "./dist/csv.mjs",
+      "require": "./dist/csv.js"
+    },
+    "./formula": {
+      "types": "./dist/formula.d.ts",
+      "import": "./dist/formula.mjs",
+      "require": "./dist/formula.js"
+    },
+    "./coords": {
+      "types": "./dist/coords.d.ts",
+      "import": "./dist/coords.mjs",
+      "require": "./dist/coords.js"
+    },
+    "./utils": {
+      "types": "./dist/utils.d.ts",
+      "import": "./dist/utils.mjs",
+      "require": "./dist/utils.js"
+    }
+  },
+  "files": [
+    "dist",
+    "src",
+    "docs",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "test": "vitest",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint src --ext .ts",
+    "prepublishOnly": "pnpm build"
+  },
+  "keywords": [
+    "spreadsheet",
+    "excel",
+    "csv",
+    "parser",
+    "converter",
+    "typescript",
+    "data",
+    "table"
+  ],
+  "author": "Anticeil Team",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/mfaizasysyauqi/antsheet.git"
+  },
+  "bugs": {
+    "url": "https://github.com/mfaizasysyauqi/antsheet/issues"
+  },
+  "homepage": "https://github.com/mfaizasysyauqi/antsheet#readme",
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "tsup": "^8.0.0",
+    "typescript": "^5.0.0",
+    "vitest": "^1.0.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "dependencies": {
+    "hyperformula": "^3.4.0",
+    "xlsx": "^0.18.5"
+  }
+}
